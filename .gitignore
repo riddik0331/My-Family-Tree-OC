@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# User data
+data/
+media/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Генеалогическое древо семьи</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" aria-live="polite">
+    <!-- Header -->
+    <header class="app-header" role="banner">
+      <div class="header-left">
+        <h1 class="app-title">
+          <span class="title-icon">🌳</span>
+          <span class="title-text">Генеалогическое древо</span>
+        </h1>
+      </div>
+      <div class="header-center">
+        <div class="tree-selector-wrapper">
+          <label for="tree-select" class="visually-hidden">Выбор дерева</label>
+          <select id="tree-select" class="tree-select" aria-label="Выберите семейное дерево"></select>
+          <button id="btn-new-tree" class="btn btn-sm btn-ghost" aria-label="Создать новое дерево" title="Создать новое дерево">✚</button>
+          <button id="btn-rename-tree" class="btn btn-sm btn-ghost" aria-label="Переименовать дерево" title="Переименовать дерево">✎</button>
+          <button id="btn-delete-tree" class="btn btn-sm btn-ghost btn-danger" aria-label="Удалить дерево" title="Удалить дерево">✕</button>
+        </div>
+      </div>
+      <div class="header-right">
+        <button id="btn-load-demo" class="btn btn-sm btn-outline" title="Загрузить демо-данные">📂 Демо</button>
+        <button id="btn-export-json" class="btn btn-sm btn-outline" title="Экспорт JSON">⬇ JSON</button>
+        <button id="btn-import-json" class="btn btn-sm btn-outline" title="Импорт JSON">⬆ JSON</button>
+        <button id="btn-export-svg" class="btn btn-sm btn-outline" title="Экспорт SVG (экран)">🖼 SVG</button>
+        <button id="btn-export-svg-print" class="btn btn-sm btn-outline" title="Экспорт SVG (печать)">🖨 SVG</button>
+      </div>
+    </header>
+
+    <!-- Import JSON (hidden input) -->
+    <input type="file" id="import-json-input" accept=".json" style="display:none">
+
+    <!-- Toolbar -->
+    <div class="toolbar" role="toolbar" aria-label="Панель инструментов">
+      <div class="toolbar-left">
+        <button id="btn-add-member" class="btn btn-primary" aria-label="Добавить родственника">➕ Добавить</button>
+        <div class="search-wrapper">
+          <label for="search-input" class="visually-hidden">Поиск</label>
+          <input type="text" id="search-input" class="search-input" placeholder="🔍 Поиск по имени, городу, роду..." aria-label="Поиск по родственникам">
+          <button id="btn-clear-search" class="btn btn-sm btn-ghost search-clear" aria-label="Очистить поиск" title="Очистить">✕</button>
+        </div>
+      </div>
+      <div class="toolbar-right">
+
+        <button id="btn-reset-view" class="btn btn-sm btn-ghost" title="Сбросить просмотр">⟲ Сброс</button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Tree Canvas Area -->
+      <div class="tree-area" id="tree-area" role="main" aria-label="Область дерева">
+        <div class="tree-scroll-container" id="tree-scroll">
+          <div class="tree-nodes" id="tree-nodes">
+            <svg class="tree-svg" id="tree-svg" aria-hidden="true"></svg>
+          </div>
+          <!-- Scroll buttons -->
+          <button class="scroll-btn scroll-left" id="scroll-left" aria-label="Прокрутить влево">‹</button>
+          <button class="scroll-btn scroll-right" id="scroll-right" aria-label="Прокрутить вправо">›</button>
+        </div>
+        <div class="tree-empty" id="tree-empty">
+          <div class="empty-icon">🌿</div>
+          <h2>Дерево пусто</h2>
+          <p>Нажмите «➕ Добавить», чтобы создать первую карточку родственника.</p>
+        </div>
+      </div>
+
+      <!-- Detail Panel -->
+      <aside class="detail-panel" id="detail-panel" role="complementary" aria-label="Панель деталей">
+        <div class="detail-empty" id="detail-empty">
+          <div class="empty-icon">👤</div>
+          <p>Выберите карточку в дереве, чтобы увидеть детали</p>
+        </div>
+        <div class="detail-content" id="detail-content" style="display:none;">
+          <div class="detail-scroll">
+            <!-- Photo -->
+            <div class="detail-photo-wrapper">
+              <img id="detail-photo" class="detail-photo" src="" alt="Фото родственника" data-preview>
+              <div class="detail-photo-placeholder" id="detail-photo-placeholder">📷</div>
+            </div>
+            <!-- Name -->
+            <h2 class="detail-name" id="detail-name"></h2>
+            <div class="detail-meta" id="detail-meta"></div>
+            <div class="detail-bio-section">
+              <h3 class="detail-section-title">📖 Биография</h3>
+              <p class="detail-bio" id="detail-bio"></p>
+            </div>
+            <div class="detail-highlights-section">
+              <h3 class="detail-section-title">⭐ Памятные факты</h3>
+              <ul class="detail-highlights" id="detail-highlights"></ul>
+            </div>
+            <div class="detail-connections-section">
+              <h3 class="detail-section-title">🔗 Семейные связи</h3>
+              <div class="detail-connections" id="detail-connections"></div>
+            </div>
+            <!-- Video -->
+            <div class="detail-video-section" id="detail-video-section" style="display:none;">
+              <h3 class="detail-section-title">🎬 Видео</h3>
+              <video id="detail-video" class="detail-video" controls></video>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button id="btn-edit-member" class="btn btn-secondary">✏️ Редактировать</button>
+            <button id="btn-delete-member" class="btn btn-danger">🗑 Удалить</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Modal Overlay (Add/Edit) -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title">Добавить родственника</h2>
+        <button class="modal-close" id="modal-close" aria-label="Закрыть модальное окно">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="member-form" novalidate>
+          <!-- Hidden ID -->
+          <input type="hidden" id="field-id">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-name">Имя и фамилия *</label>
+              <input type="text" id="field-name" class="form-input" required placeholder="Иван Орлов">
+            </div>
+            <div class="form-group">
+              <label for="field-gender">Пол</label>
+              <select id="field-gender" class="form-input">
+                <option value="">— Не указан —</option>
+                <option value="male">Мужчина</option>
+                <option value="female">Женщина</option>
+                <option value="other">Другой</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row" id="form-row-maiden">
+            <div class="form-group">
+              <label for="field-maiden-name">Девичья фамилия</label>
+              <input type="text" id="field-maiden-name" class="form-input" placeholder="Орлова">
+            </div>
+            <div class="form-group">
+              <label for="field-family-branch">Фамилия рода</label>
+              <input type="text" id="field-family-branch" class="form-input" placeholder="Орловы">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-birth-date">Дата рождения</label>
+              <input type="date" id="field-birth-date" class="form-input">
+            </div>
+            <div class="form-group">
+              <label for="field-death-date">Дата смерти</label>
+              <input type="date" id="field-death-date" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-generation">Поколение (1–8)</label>
+              <input type="number" id="field-generation" class="form-input" min="1" max="8" placeholder="Авто">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-location">Текущий город</label>
+              <input type="text" id="field-location" class="form-input" placeholder="Полтава">
+            </div>
+            <div class="form-group">
+              <label for="field-birth-place">Место рождения</label>
+              <input type="text" id="field-birth-place" class="form-input" placeholder="Полтава, Украина">
+            </div>
+          </div>
+
+          <div class="form-row form-row-parents">
+            <div class="form-group">
+              <label for="field-mother">Мать</label>
+              <select id="field-mother" class="form-input">
+                <option value="">— Не указана —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="field-father">Отец</label>
+              <select id="field-father" class="form-input">
+                <option value="">— Не указан —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="field-partner">Партнёр(ша)</label>
+              <select id="field-partner" class="form-input">
+                <option value="">— Не указан(а) —</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="field-bio">Краткая биография</label>
+            <textarea id="field-bio" class="form-input form-textarea" rows="3" placeholder="Биография..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Памятные факты</label>
+            <div id="highlights-container">
+              <div class="highlight-row">
+                <input type="text" class="form-input highlight-input" placeholder="Например: Участник войны">
+                <button type="button" class="btn btn-sm btn-ghost highlight-remove" aria-label="Удалить факт">✕</button>
+              </div>
+            </div>
+            <button type="button" id="btn-add-highlight" class="btn btn-sm btn-outline" style="margin-top:6px;">➕ Добавить факт</button>
+          </div>
+
+          <div class="form-group">
+            <label for="field-photo">Фото</label>
+            <div class="file-input-row">
+              <input type="file" id="field-photo" class="form-input form-file" accept="image/*">
+              <input type="hidden" id="field-photo-path">
+              <button type="button" id="btn-clear-photo" class="btn btn-sm btn-ghost" aria-label="Очистить фото">✕</button>
+            </div>
+            <img id="field-photo-preview" class="form-photo-preview" style="display:none;">
+          </div>
+
+          <div class="form-group">
+            <label for="field-video">Видео</label>
+            <div class="file-input-row">
+              <input type="file" id="field-video" class="form-input form-file" accept="video/*">
+              <input type="hidden" id="field-video-path">
+              <button type="button" id="btn-clear-video" class="btn btn-sm btn-ghost" aria-label="Очистить видео">✕</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-form-cancel" class="btn btn-ghost">Отмена</button>
+        <button id="btn-form-save" class="btn btn-primary">💾 Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Photo Preview Popup -->
+  <div class="photo-preview-popup" id="photo-preview-popup">
+    <img id="photo-preview-img" src="" alt="Предпросмотр фото">
+  </div>
+
+  <!-- Hidden file input for demo -->
+  <script src="app.js"></script>
+</body>
+</html>
