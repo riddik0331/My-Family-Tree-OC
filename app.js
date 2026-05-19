@@ -481,8 +481,7 @@ function renderNodes(tree, positions, filterFn) {
     },
       el('span', { className: 'node-gender-icon' }, genderIcon),
       el('div', { className: 'node-name' }, shortName),
-      m.years ? el('div', { className: 'node-years' }, m.years) : null,
-      m.kinship ? el('div', { className: 'node-kinship' }, m.kinship) : null
+      m.years ? el('div', { className: 'node-years' }, m.years) : null
     );
 
     node.addEventListener('click', (e) => {
@@ -723,7 +722,6 @@ function showDetail(tree, id) {
   // Meta
   let metaHtml = '';
   if (member.years) metaHtml += `<span>${member.years}</span>`;
-  if (member.kinship) metaHtml += `<span class="meta-divider">·</span><span>${member.kinship}</span>`;
   if (member.gender === 'female' && member.maidenName) metaHtml += `<span class="meta-divider">·</span><span>урожд. ${member.maidenName}</span>`;
   if (member.familyBranch) metaHtml += `<span class="meta-divider">·</span><span>${member.familyBranch}</span>`;
   if (member.location) metaHtml += `<br><span>📍 ${member.location}</span>`;
