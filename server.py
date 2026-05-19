@@ -9,8 +9,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse
 
-PORT = 8000
-HOST = "127.0.0.1"
+PORT = int(os.environ.get("PORT", 8000))
+HOST = os.environ.get("HOST", "127.0.0.1")
 MEDIA_DIR = Path(__file__).parent / "media"
 DATA_DIR = Path(__file__).parent / "data"
 DATA_FILE = DATA_DIR / "forest.json"
