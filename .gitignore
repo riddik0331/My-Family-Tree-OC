@@ -6,6 +6,7 @@ __pycache__/
 # User data
 data/
 media/
+trees/*.json
 
 # Logs
 *.log
