@@ -135,7 +135,12 @@ class FamilyTreeHandler(SimpleHTTPRequestHandler):
         """Quiet logging with timestamp."""
         import datetime
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        print(f"[{timestamp}] {args[0]} {args[1]} {args[2]}")
+        if len(args) == 3:
+            print(f"[{timestamp}] {args[0]} {args[1]} {args[2]}")
+        elif len(args) == 2:
+            print(f"[{timestamp}] ERROR {args[0]} {args[1]}")
+        else:
+            print(f"[{timestamp}] {' '.join(str(a) for a in args)}")
 
 
 def main():
