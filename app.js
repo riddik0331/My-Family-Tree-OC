@@ -477,7 +477,8 @@ function renderNodes(tree, positions, filterFn) {
 
     const genderIcon = m.gender === 'female' ? '♀' : m.gender === 'male' ? '♂' : '👤';
     const nameParts = m.name.split(' ');
-    const shortName = nameParts.length > 1 ? `${nameParts[0]} ${nameParts[1][0]}.` : m.name;
+    const surname = nameParts[0] || m.name;
+    const givenName = nameParts[1] || '';
 
     const node = el('div', {
       className: `tree-node ${m.gender || 'other'}`,
@@ -489,7 +490,10 @@ function renderNodes(tree, positions, filterFn) {
       }
     },
       el('span', { className: 'node-gender-icon' }, genderIcon),
-      el('div', { className: 'node-name' }, shortName),
+      el('div', { className: 'node-name' },
+        el('div', { className: 'node-surname' }, surname),
+        givenName ? el('div', { className: 'node-given' }, givenName) : null
+      ),
       m.years ? el('div', { className: 'node-years' }, m.years) : null
     );
 
@@ -551,13 +555,14 @@ function renderLinks(tree, positions, filterFn) {
       continue;
     }
 
-    // Parent bus line — горизонтальная шина над детьми,
-    // соединяет вертикальные линии от родителей
+    // Parent bus line — горизонтальная шина по центру между родителями и детьми
     const childPositions = visibleChildren.map(c => positions[c.id]).filter(Boolean);
     if (!childPositions.length) continue;
 
-    // Y шины — чуть выше верхнего ребёнка
-    const busY = Math.min(...childPositions.map(p => p.y)) - 15;
+    // Y шины — ровно посередине между нижним краем родителей и верхним краем детей
+    const parentBottomY = Math.max(...parentNodes.map(p => p.y + NODE_H));
+    const childTopY = Math.min(...childPositions.map(p => p.y));
+    const busY = (parentBottomY + childTopY) / 2;
 
     // X шины — от левого родителя до правого ребёнка (или правого родителя)
     const allBusXs = [
@@ -578,12 +583,12 @@ function renderLinks(tree, positions, filterFn) {
       svg.appendChild(line);
     }
 
-    // Вертикальные линии от шины вниз к каждому ребёнку
+    // Вертикальные линии от шины к центру каждого ребёнка
     for (const child of visibleChildren) {
       const cp = positions[child.id];
       if (!cp) continue;
       const cx = cp.x + NODE_W / 2;
-      const cy = cp.y;
+      const cy = cp.y + NODE_H / 2;  // центр карточки
       const line = document.createElementNS(ns, 'line');
       line.setAttribute('x1', cx);
       line.setAttribute('y1', busY);
@@ -593,12 +598,12 @@ function renderLinks(tree, positions, filterFn) {
       svg.appendChild(line);
     }
 
-    // Вертикальные линии от родителей вниз к шине
+    // Вертикальные линии от центра каждого родителя к шине
     for (const pid of parentIds) {
       const pp = positions[pid];
       if (!pp) continue;
       const px = pp.x + NODE_W / 2;
-      const py = pp.y + NODE_H;
+      const py = pp.y + NODE_H / 2;  // центр карточки
       const line = document.createElementNS(ns, 'line');
       line.setAttribute('x1', px);
       line.setAttribute('y1', py);
@@ -623,10 +628,9 @@ function renderLinks(tree, positions, filterFn) {
     // Draw only once (m.id < partner.id)
     if (m.id >= partner.id) continue;
 
-    // Строго горизонтальная линия между правым краем левого партнёра
-    // и левым краем правого партнёра на уровне середины их карточек
-    const leftX = mp.x + NODE_W;
-    const rightX = pp.x;
+    // Горизонтальная линия от центра левой карточки к центру правой
+    const leftX = mp.x + NODE_W / 2;
+    const rightX = pp.x + NODE_W / 2;
     // Единая Y — середина между центрами обеих карточек (строго горизонтально)
     const midY = (mp.y + NODE_H / 2 + pp.y + NODE_H / 2) / 2;
 
