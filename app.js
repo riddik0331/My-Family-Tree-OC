@@ -853,7 +853,24 @@ function populateForm(member) {
 
 function populateRelationSelects(currentMember) {
   const tree = getActiveTree();
-  const members = tree.members.filter(m => m.id !== (currentMember ? currentMember.id : null));
+  const members = tree.members
+    .filter(m => m.id !== (currentMember ? currentMember.id : null))
+    .sort((a, b) => {
+      const aParts = a.name.split(' ');
+      const bParts = b.name.split(' ');
+      // По фамилии (первое слово)
+      const aSurname = (aParts[0] || '').toLowerCase();
+      const bSurname = (bParts[0] || '').toLowerCase();
+      if (aSurname !== bSurname) return aSurname < bSurname ? -1 : 1;
+      // По имени (второе слово)
+      const aName = (aParts[1] || '').toLowerCase();
+      const bName = (bParts[1] || '').toLowerCase();
+      if (aName !== bName) return aName < bName ? -1 : 1;
+      // По отчеству (третье слово)
+      const aPatr = (aParts[2] || '').toLowerCase();
+      const bPatr = (bParts[2] || '').toLowerCase();
+      return aPatr < bPatr ? -1 : aPatr > bPatr ? 1 : 0;
+    });
 
   const motherSelect = dom.fieldMother;
   const fatherSelect = dom.fieldFather;
@@ -863,10 +880,19 @@ function populateRelationSelects(currentMember) {
   fatherSelect.innerHTML = '<option value="">— Не указан —</option>';
   partnerSelect.innerHTML = '<option value="">— Не указан(а) —</option>';
 
+  // Фильтр по полу: мать — женщины, отец — мужчины, партнёр — противоположный пол
+  const partnerGender = currentMember
+    ? (currentMember.gender === 'male' ? 'female'
+        : currentMember.gender === 'female' ? 'male'
+        : null)
+    : null;
+
   for (const m of members) {
-    motherSelect.appendChild(el('option', { value: m.id }, m.name));
-    fatherSelect.appendChild(el('option', { value: m.id }, m.name));
-    partnerSelect.appendChild(el('option', { value: m.id }, m.name));
+    if (m.gender === 'female') motherSelect.appendChild(el('option', { value: m.id }, m.name));
+    if (m.gender === 'male') fatherSelect.appendChild(el('option', { value: m.id }, m.name));
+    if (!partnerGender || m.gender === partnerGender) {
+      partnerSelect.appendChild(el('option', { value: m.id }, m.name));
+    }
   }
 
   // Set selected values directly (cloneNode не копирует selected IDL-свойство)
