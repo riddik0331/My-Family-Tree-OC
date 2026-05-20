@@ -285,6 +285,8 @@ function recalculateGenerations(tree) {
   for (let iter = 0; iter < maxIter; iter++) {
     let changed = false;
     for (const m of tree.members) {
+      // Если нет родителей — не трогаем поколение (пользователь установил вручную)
+      if (!m.motherId && !m.fatherId) continue;
       let gen = 1;
       if (m.motherId) {
         const mother = getMember(tree, m.motherId);
@@ -294,14 +296,21 @@ function recalculateGenerations(tree) {
         const father = getMember(tree, m.fatherId);
         if (father) gen = Math.max(gen, father.generation + 1);
       }
+      // Партнёры должны быть на одном уровне (без +1 — они не родители)
+      if (m.partnerId) {
+        const partner = getMember(tree, m.partnerId);
+        if (partner) gen = Math.max(gen, partner.generation);
+      }
       if (gen !== m.generation) { m.generation = gen; changed = true; }
     }
-    // Sync partner generations
+    // Sync partner generations — обоюдный max, чтобы не тянуть вниз
     for (const m of tree.members) {
       if (m.partnerId) {
         const partner = getMember(tree, m.partnerId);
         if (partner && partner.generation !== m.generation) {
-          partner.generation = m.generation;
+          const maxGen = Math.max(partner.generation, m.generation);
+          partner.generation = maxGen;
+          m.generation = maxGen;
           changed = true;
         }
       }
@@ -855,13 +864,16 @@ function populateRelationSelects(currentMember) {
   partnerSelect.innerHTML = '<option value="">— Не указан(а) —</option>';
 
   for (const m of members) {
-    const opt = el('option', { value: m.id }, m.name);
-    if (currentMember && currentMember.motherId === m.id) opt.selected = true;
-    motherSelect.appendChild(opt.cloneNode(true));
-    if (currentMember && currentMember.fatherId === m.id) opt.selected = true;
-    fatherSelect.appendChild(opt.cloneNode(true));
-    if (currentMember && currentMember.partnerId === m.id) opt.selected = true;
-    partnerSelect.appendChild(opt.cloneNode(true));
+    motherSelect.appendChild(el('option', { value: m.id }, m.name));
+    fatherSelect.appendChild(el('option', { value: m.id }, m.name));
+    partnerSelect.appendChild(el('option', { value: m.id }, m.name));
+  }
+
+  // Set selected values directly (cloneNode не копирует selected IDL-свойство)
+  if (currentMember) {
+    if (currentMember.motherId) motherSelect.value = currentMember.motherId;
+    if (currentMember.fatherId) fatherSelect.value = currentMember.fatherId;
+    if (currentMember.partnerId) partnerSelect.value = currentMember.partnerId;
   }
 }
 
@@ -927,7 +939,24 @@ function saveForm() {
   }
 
   if (editingMemberId) {
+    const oldMember = getMember(tree, editingMemberId);
+    const oldPartnerId = oldMember ? oldMember.partnerId : '';
     updateMember(tree, editingMemberId, data);
+    // Sync new partner back-reference
+    const updated = getMember(tree, editingMemberId);
+    if (updated && data.partnerId) {
+      const partner = getMember(tree, data.partnerId);
+      if (partner && partner.partnerId !== updated.id) {
+        partner.partnerId = updated.id;
+      }
+    }
+    // Clean up old partner's back-reference if partner changed
+    if (oldPartnerId && oldPartnerId !== data.partnerId) {
+      const oldPartner = getMember(tree, oldPartnerId);
+      if (oldPartner && oldPartner.partnerId === editingMemberId) {
+        oldPartner.partnerId = '';
+      }
+    }
   } else {
     const member = addMember(tree, data);
     // If parents/partner specified, update their childrenIds/partnerId
@@ -941,10 +970,20 @@ function saveForm() {
     }
     if (data.partnerId) {
       const partner = getMember(tree, data.partnerId);
-      if (partner && !partner.partnerId) partner.partnerId = member.id;
+      if (partner && partner.partnerId !== member.id) partner.partnerId = member.id;
     }
     saveForest();
   }
+  // Sync all partner back-references (на случай, если партнёр изменился)
+  for (const m of tree.members) {
+    if (m.partnerId) {
+      const partner = getMember(tree, m.partnerId);
+      if (partner && !partner.partnerId) {
+        partner.partnerId = m.id;
+      }
+    }
+  }
+  saveForest();
 
   closeModal();
   renderAll();
